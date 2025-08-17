@@ -1,103 +1,120 @@
-'use client'
+'use client';
 
-import { useState, useCallback } from 'react'
-import { useDropzone } from 'react-dropzone'
-import { motion } from 'framer-motion'
-import { Upload, Image as ImageIcon, X } from 'lucide-react'
+import { useCallback, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { motion } from 'framer-motion';
+import { Upload, X, Image as ImageIcon } from 'lucide-react';
 
 interface ImageUploaderProps {
-  onImageUpload: (imageUrl: string, file?: File) => void
+  onImageUpload: (file: File, dataUrl: string) => void;
 }
 
 export default function ImageUploader({ onImageUpload }: ImageUploaderProps) {
-  const [preview, setPreview] = useState<string | null>(null)
-  const [dragActive, setDragActive] = useState(false)
+  const [preview, setPreview] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0]
+    const file = acceptedFiles[0];
     if (file) {
-      const reader = new FileReader()
+      setUploadedFile(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
       reader.onload = (e) => {
-        const result = e.target?.result as string
-        setPreview(result)
-        onImageUpload(result, file)
-      }
-      reader.readAsDataURL(file)
+        const dataUrl = e.target?.result as string;
+        setPreview(dataUrl);
+        onImageUpload(file, dataUrl);
+      };
+      reader.readAsDataURL(file);
     }
-  }, [onImageUpload])
+  }, [onImageUpload]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.bmp']
+      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.bmp', '.webp']
     },
     multiple: false,
     maxSize: 10 * 1024 * 1024 // 10MB
-  })
+  });
 
   const removeImage = () => {
-    setPreview(null)
-    onImageUpload('')
-  }
+    setPreview(null);
+    setUploadedFile(null);
+    // Reset the parent state by calling onImageUpload with empty values
+    onImageUpload({} as File, '');
+  };
 
   return (
-    <div className="glass-effect rounded-2xl p-6">
-      <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-        <ImageIcon className="w-6 h-6 text-primary-400" />
-        Upload Your Painting
-      </h2>
-      
+    <div className="space-y-4">
       {!preview ? (
-        <div
+        <motion.div
           {...getRootProps()}
-          className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 ${
-            isDragActive || dragActive
-              ? 'border-primary-400 bg-primary-400/10'
-              : 'border-gray-600 hover:border-primary-400 hover:bg-primary-400/5'
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className={`glass-effect rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 ${
+            isDragActive ? 'border-2 border-purple-400 bg-purple-900/20' : ''
           }`}
-          onDragEnter={() => setDragActive(true)}
-          onDragLeave={() => setDragActive(false)}
         >
           <input {...getInputProps()} />
-          <motion.div
-            animate={{ scale: isDragActive ? 1.05 : 1 }}
-            transition={{ duration: 0.2 }}
-          >
-            <Upload className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <p className="text-lg font-medium mb-2">
-              {isDragActive ? 'Drop your painting here!' : 'Drag & drop your painting'}
-            </p>
-            <p className="text-gray-400 mb-4">
-              or click to browse files
-            </p>
-            <p className="text-sm text-gray-500">
-              Supports: JPEG, PNG, GIF, BMP (Max: 10MB)
-            </p>
-          </motion.div>
-        </div>
+          
+          <div className="space-y-4">
+            <div className="flex justify-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center">
+                <Upload className="w-10 h-10 text-white" />
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-xl font-semibold text-white mb-2">
+                {isDragActive ? 'Drop your painting here!' : 'Upload Your Painting'}
+              </h3>
+              <p className="text-gray-300">
+                {isDragActive 
+                  ? 'Release to upload' 
+                  : 'Drag & drop an image, or click to browse'
+                }
+              </p>
+            </div>
+            
+            <div className="text-sm text-gray-400">
+              <p>Supports: JPEG, PNG, GIF, BMP, WebP</p>
+              <p>Max size: 10MB</p>
+            </div>
+          </div>
+        </motion.div>
       ) : (
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="relative"
+          className="glass-effect rounded-2xl p-6"
         >
-          <img
-            src={preview}
-            alt="Uploaded painting"
-            className="w-full h-64 object-cover rounded-xl"
-          />
-          <button
-            onClick={removeImage}
-            className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 transition-colors duration-200"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="relative">
+            <img
+              src={preview}
+              alt="Uploaded painting"
+              className="w-full h-auto rounded-lg shadow-lg"
+            />
+            
+            <button
+              onClick={removeImage}
+              className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          
           <div className="mt-4 text-center">
-            <p className="text-green-400 font-medium">✓ Painting uploaded successfully!</p>
-            <p className="text-sm text-gray-400 mt-1">Ready to generate animation</p>
+            <div className="flex items-center justify-center gap-2 text-green-400 mb-2">
+              <ImageIcon className="w-5 h-5" />
+              <span className="font-medium">Image uploaded successfully!</span>
+            </div>
+            <p className="text-sm text-gray-300">
+              {uploadedFile?.name} ({(uploadedFile?.size / 1024 / 1024).toFixed(2)} MB)
+            </p>
           </div>
         </motion.div>
       )}
     </div>
-  )
+  );
 }
